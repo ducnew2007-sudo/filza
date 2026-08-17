@@ -1,0 +1,53 @@
+name: Build FilzaSlop IPA
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Theos
+        uses: actions/checkout@v4
+        with:
+          repository: theos/theos
+          ref: master
+          path: theos
+          submodules: recursive
+
+      - name: Set up iOS SDK
+        uses: actions/checkout@v4
+        with:
+          repository: theos/sdks
+          ref: master
+          path: theos/sdks
+
+      - name: Set THEOS environment variable
+        run: echo "THEOS=$GITHUB_WORKSPACE/theos" >> $GITHUB_ENV
+
+      - name: Download Base Filza IPA
+        run: |
+          curl -LO https://github.com/0xjohnnydev/FilzaSlop/releases/download/v1.0.0/FilzaSlop-v1.0.0-unsigned.ipa || \
+          curl -LO https://github.com/34306/FilzaJailedDS/releases/download/1.0.0/Filza.ipa
+
+      - name: Build Tweak and Pack IPA
+        run: |
+          chmod +x scripts/build_release_ipa.sh
+          BASE_IPA=$(ls Filza*.ipa | head -n 1)
+          echo "Using Base IPA: $BASE_IPA"
+          ./scripts/build_release_ipa.sh "$BASE_IPA" "FilzaSlop-Fixed.ipa"
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FilzaSlop-Fixed-IPA
+          path: FilzaSlop-Fixed.ipa
